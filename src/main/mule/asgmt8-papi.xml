@@ -1,0 +1,79 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<mule xmlns:jms="http://www.mulesoft.org/schema/mule/jms" xmlns:validation="http://www.mulesoft.org/schema/mule/validation"
+	xmlns:ee="http://www.mulesoft.org/schema/mule/ee/core"
+	xmlns:http="http://www.mulesoft.org/schema/mule/http" xmlns="http://www.mulesoft.org/schema/mule/core" xmlns:doc="http://www.mulesoft.org/schema/mule/documentation" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://www.mulesoft.org/schema/mule/core http://www.mulesoft.org/schema/mule/core/current/mule.xsd
+http://www.mulesoft.org/schema/mule/http http://www.mulesoft.org/schema/mule/http/current/mule-http.xsd
+http://www.mulesoft.org/schema/mule/ee/core http://www.mulesoft.org/schema/mule/ee/core/current/mule-ee.xsd
+http://www.mulesoft.org/schema/mule/validation http://www.mulesoft.org/schema/mule/validation/current/mule-validation.xsd
+http://www.mulesoft.org/schema/mule/jms http://www.mulesoft.org/schema/mule/jms/current/mule-jms.xsd">
+	<http:request-config name="HTTP_Request_configuration" doc:name="HTTP Request configuration" doc:id="3836041e-d722-4402-8ddc-8f1fdcccbc60" >
+		<http:request-connection host="localhost" port="8046" />
+	</http:request-config>
+	<http:listener-config name="HTTP_Listener_config" doc:name="HTTP Listener config" doc:id="0b60aa21-ec3b-4715-b1d5-a737933c2a65" >
+		<http:listener-connection host="0.0.0.0" port="8047" />
+	</http:listener-config>
+	<flow name="asgmt8-papiFlow" doc:id="147fa033-c26d-4921-abc6-555790fdf996" >
+		<http:listener doc:name="HTTP:8047/asgmt8-papi" doc:id="2efb6d24-80f5-4179-9360-d35ae47b6b8d" config-ref="HTTP_Listener_config" path="/asgmt8-papi">
+		</http:listener>
+		<ee:transform doc:name="All USERID's in payload and variable" doc:id="62d0f8a9-5988-4554-92a1-35305ac8b2fb" >
+			<ee:message >
+				<ee:set-payload ><![CDATA[%dw 2.0
+output application/java
+---
+{
+	"USERID1":attributes.queryParams.USERID1 default "",
+	"USERID2":attributes.queryParams.USERID2 default "",
+	"USERID3":attributes.queryParams.USERID3 default ""
+}]]></ee:set-payload>
+			</ee:message>
+			<ee:variables >
+				<ee:set-variable variableName="USERID1" ><![CDATA[attributes.queryParams.USERID1 default ""]]></ee:set-variable>
+				<ee:set-variable variableName="USERID2" ><![CDATA[attributes.queryParams.USERID2 default ""]]></ee:set-variable>
+				<ee:set-variable variableName="USERID3" ><![CDATA[attributes.queryParams.USERID3 default ""]]></ee:set-variable>
+			</ee:variables>
+		</ee:transform>
+		<validation:is-true doc:name="Is true for 3 USERID's" doc:id="f60e05a0-d07c-4529-a1e0-de8781d5f62a" expression='#[(vars.USERID1 != null and trim(vars.USERID1 !=""))  or (vars.USERID2 != null and trim(vars.USERID2 !=""))  or (vars.USERID3 != null and trim(vars.USERID3 !="")) ]' message='#[" Value for at least one USERID should be present in the request"]'/>
+		<http:request method="GET" doc:name="HTTP:8046/api/details" doc:id="5adaa768-6b46-4bb7-a667-1915e32713e8" path="/api/details" config-ref="HTTP_Request_configuration" responseTimeout="300000">
+			<http:query-params ><![CDATA[#[output application/json
+---
+{
+	"USERID3" : vars.USERID3,
+	"USERID1" : vars.USERID1,
+	"USERID2" : vars.USERID2
+}]]]></http:query-params>
+		</http:request>
+		<logger level="INFO" doc:name="payload" doc:id="582d9f53-d2eb-45eb-852c-a3f18f8f539a" message="#[payload]"/>
+		<error-handler >
+			<on-error-continue enableNotifications="true" logException="true" doc:name="On Error Continue" doc:id="63d6a71a-dc05-4ca7-82e1-e5c20d895e3a" type="VALIDATION:INVALID_BOOLEAN">
+				<ee:transform doc:name="error and message" doc:id="eb88c943-aaf9-4487-97c3-84e094a6cd98">
+					<ee:message>
+						<ee:set-payload><![CDATA[%dw 2.0
+output application/json
+---
+{
+	"error": error.description,
+	"Message": "Value for at least one USERID should be present in the request"
+}]]></ee:set-payload>
+					</ee:message>
+				</ee:transform>
+				<logger level="INFO" doc:name="payload" doc:id="b7bc0442-7598-4a7a-819a-6fc8e1ed20a5" message="#[payload]"/>
+			</on-error-continue>
+			<on-error-continue enableNotifications="true" logException="true" doc:name="On Error Continue" doc:id="71e48c86-86f1-4aad-9127-0b77444b4ef5" type="ANY">
+				<ee:transform doc:name='error and message' doc:id="7d6aee56-49f7-4852-99cd-b40caf5e9885" >
+					<ee:message >
+						<ee:set-payload ><![CDATA[%dw 2.0
+output application/json
+---
+error.muleMessage.typedValue default error.description
+]]></ee:set-payload>
+					</ee:message>
+					<ee:variables >
+						<ee:set-variable variableName="statusCode" ><![CDATA[400]]></ee:set-variable>
+					</ee:variables>
+				</ee:transform>
+				<logger level="INFO" doc:name="payload" doc:id="adc1af1b-4b73-44d8-a412-cebfa58a7e0b" message="#[payload]"/>
+			</on-error-continue>
+		</error-handler>
+	</flow>
+</mule>
