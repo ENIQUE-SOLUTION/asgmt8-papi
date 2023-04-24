@@ -33,7 +33,7 @@ output application/java
 				<ee:set-variable variableName="USERID3" ><![CDATA[attributes.queryParams.USERID3 default ""]]></ee:set-variable>
 			</ee:variables>
 		</ee:transform>
-		<validation:is-true doc:name="Is true for 3 USERID's" doc:id="f60e05a0-d07c-4529-a1e0-de8781d5f62a" expression='#[(vars.USERID1 != null and trim(vars.USERID1 !=""))  or (vars.USERID2 != null and trim(vars.USERID2 !=""))  or (vars.USERID3 != null and trim(vars.USERID3 !="")) ]' message='#[" Value for at least one USERID should be present in the request"]'/>
+		<validation:is-true doc:name="Is true for all 3 USERID's" doc:id="f60e05a0-d07c-4529-a1e0-de8781d5f62a" expression='#[(vars.USERID1 != null and trim(vars.USERID1 !=""))  or (vars.USERID2 != null and trim(vars.USERID2 !=""))  or (vars.USERID3 != null and trim(vars.USERID3 !="")) ]' message='#[" Value for at least one USERID should be present in the request"]'/>
 		<http:request method="GET" doc:name="HTTP:8046/api/details" doc:id="5adaa768-6b46-4bb7-a667-1915e32713e8" path="/api/details" config-ref="HTTP_Request_configuration" responseTimeout="300000">
 			<http:query-params ><![CDATA[#[output application/json
 ---
